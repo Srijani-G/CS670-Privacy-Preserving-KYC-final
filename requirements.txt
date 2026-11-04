@@ -1,0 +1,14 @@
+# The core library uses only the Python standard library (hashlib, secrets,
+# sqlite3) -- no third-party package is required to run the main demo, tests or
+# benchmarks.
+#
+# Required ONLY for the BBS+ credential upgrade (ppkyc/zkp/bbs.py,
+# demo/demo_bbs.py, tests/test_bbs.py), which fixes the credential-linkability
+# and non-blind-issuance limitations.  BBS+ needs a bilinear pairing, which the
+# standard library does not provide; py_ecc supplies a pure-Python BLS12-381.
+# The rest of the project still runs with no third-party package at all.
+py_ecc>=8.0
+
+# Optional, for the property-based / nicer test experience:
+pytest>=7.0
+hypothesis>=6.0
