@@ -24,6 +24,19 @@ def test_psi_equals_plain_intersection():
     assert matched == plain
 
 
+def test_psi_deduplicates_canonical_customer_and_watchlist_identifiers():
+    watch = [
+        "Mallory|19700505|RU",
+        "MALLORY|19700505|ru",
+    ]
+    customers = [
+        "MALLORY|19700505|RU",
+        "Mallory|19700505|RU",
+        "mallory|19700505|ru",
+    ]
+    assert run_psi(watch, customers) == ["MALLORY|19700505|RU"]
+
+
 def test_psi_leakage_only_sizes():
     ch = Channel()
     run_psi(["a|1|X"], ["b|2|Y", "c|3|Z"], ch)

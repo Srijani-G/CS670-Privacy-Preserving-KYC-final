@@ -32,12 +32,24 @@ def canonicalise(identifier: str) -> bytes:
     return "|".join(part.strip().lower() for part in identifier.split("|")).encode()
 
 
+def deduplicate_identifiers(identifiers: list[str]) -> list[str]:
+    """Keep the first spelling of each canonical identifier, preserving order."""
+    seen: set[bytes] = set()
+    unique = []
+    for identifier in identifiers:
+        key = canonicalise(identifier)
+        if key not in seen:
+            seen.add(key)
+            unique.append(identifier)
+    return unique
+
+
 class Regulator:
     """PSI sender: holds the secret watchlist ``W``."""
 
     def __init__(self, watchlist: list[str]):
         self.b = GROUP.rand_scalar()
-        self._w_items = [canonicalise(w) for w in watchlist]
+        self._w_items = [canonicalise(w) for w in deduplicate_identifiers(watchlist)]
         # cache H(w)
         self._hw = [GROUP.hash_to_group(w) for w in self._w_items]
 
@@ -56,8 +68,8 @@ class Bank:
 
     def __init__(self, customers: list[str]):
         self.a = GROUP.rand_scalar()
-        self.customers = customers
-        self._q_items = [canonicalise(c) for c in customers]
+        self.customers = deduplicate_identifiers(customers)
+        self._q_items = [canonicalise(c) for c in self.customers]
 
     def query(self) -> list[int]:
         """Message 1: { H(q)^a } preserving the order of ``Q``."""
