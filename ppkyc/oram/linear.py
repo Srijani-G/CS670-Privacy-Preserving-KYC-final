@@ -4,7 +4,7 @@ The client keeps ``n`` encrypted documents on an untrusted server.  Every access
 (read or write) touches **every** slot -- it reads all ciphertexts and rewrites
 all of them (re-encrypting so ciphertexts change) -- so the server's physical
 access pattern is independent of the logical index.  This is the simplest thing
-that defeats access-pattern inference (attack #5), at O(n) cost per access.
+that defeats access-pattern inference (attack #4), at O(n) cost per access.
 
 Encryption here is a SHA-256 keystream XOR (a stand-in PRG, slides allow using a
 PRG/AES); the point of the module is the access pattern, not the cipher.

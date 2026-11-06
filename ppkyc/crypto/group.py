@@ -4,7 +4,8 @@ The whole project works in a multiplicative group modulo a prime ``p`` whose
 order is a large prime ``q`` (``q | p-1``).  This matches how the course slides
 analyse the sigma protocols (exponentiation modulo a prime, slide "group theory
 refresher").  Every verifier is expected to call :meth:`Group.is_member` on
-every received element -- skipping that check is attack #13 in the attack lab.
+every received element -- skipping that check can leak secret bits via small
+subgroups.
 
 The constants below are a freshly generated 2048-bit ``p`` with a 256-bit prime
 subgroup order ``q`` (same shape as RFC 5114 group 2.3).  They were produced and
@@ -87,13 +88,13 @@ class Group:
     def div(self, a: int, b: int) -> int:
         return self.mul(a, self.inv(b))
 
-    # -- membership (attack #13 defence) -----------------------------------
+    # -- membership (small-subgroup defence) -------------------------------
     def is_member(self, h: int) -> bool:
         """True iff ``h`` is a genuine element of the order-``q`` subgroup.
 
         Requires ``1 < h < p`` and ``h^q == 1 (mod p)``.  Every verifier calls
-        this on every received group element; skipping it is attack #13
-        (invalid-group input), which can leak secret bits via small subgroups.
+        this on every received group element; skipping it (invalid-group input)
+        can leak secret bits via small subgroups.
         """
         if not (1 < h < self.p):
             return False
@@ -112,7 +113,7 @@ class Group:
         then raise to the cofactor ``(p-1)/q`` to land in the order-``q``
         subgroup (reject the identity).  Using a genuine hash-*to-group* -- as
         opposed to hashing identifiers to plain integers -- is what blocks the
-        ratio-leak attack (#3) in DH-PSI.
+        ratio-leak in DH-PSI.
         """
         cofactor = (self.p - 1) // self.q
         nbytes = (self.p.bit_length() + 7) // 8

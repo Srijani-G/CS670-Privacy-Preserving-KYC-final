@@ -11,7 +11,7 @@ learns nothing about ``b``.
     Receiver: m_b = e_b XOR H( (g^{r_b})^k )
 
 The receiver cannot know the discrete logs of *both* public keys without knowing
-``log C``; doing so anyway is the malicious-receiver attack (#6).
+``log C``; doing so anyway is the malicious-receiver attack.
 
 Messages are byte strings; :func:`ot_send` / :func:`ot_receive` exchange plain
 Python objects (the demo's :class:`~ppkyc.channel.Channel` records them as the

@@ -12,11 +12,11 @@ The Bank learns which of *its* customers matched, and ``|W|``.  The Regulator
 learns ``|Q|``.
 
 ``H`` hashes **into the group** (:meth:`Group.hash_to_group`); hashing to plain
-integers instead leaks ratios (attack #3).  Every received element is checked
-for subgroup membership (attack #13).  Identifiers are canonicalised; fuzzy
-matching is out of scope.  A malicious bank can still enumerate the identifier
-space (attack #12) -- PSI cannot prevent that cryptographically; v1 only
-mitigates it with authenticated queries, a query cap and an audit log.
+integers instead leaks ratios.  Every received element is checked for subgroup
+membership.  Identifiers are canonicalised; fuzzy matching is out of scope.  A
+malicious bank can still enumerate the identifier space -- PSI cannot prevent
+that cryptographically; v1 only mitigates it with authenticated queries, a
+query cap and an audit log.
 """
 
 from __future__ import annotations

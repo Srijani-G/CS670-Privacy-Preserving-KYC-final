@@ -57,8 +57,8 @@ It is a local educational demo only; do not enter real customer information.
    <http://127.0.0.1:8001/api/health>, and its interactive API docs are at
    <http://127.0.0.1:8001/docs>.
 
-Press `Ctrl+C` in each terminal to stop its server. The Attack Lab runs all 13
-scenarios and may take around a minute.
+Press `Ctrl+C` in each terminal to stop its server. The Attack Lab runs all 7
+scenarios and may take a few seconds.
 
 ## The four modules
 
@@ -89,17 +89,18 @@ docs/         threat_model.md  paper_to_module.md
 ## Shared cryptographic core
 
 - **Group** — a 2048-bit Schnorr group with a 256-bit prime-order subgroup.
-  `is_member` is enforced on every received element (skipping it is attack #13);
-  `hash_to_group` clears the cofactor so PSI leaks no integer ratios (attack #3).
+  `is_member` is enforced on every received element (skipping it can leak secret
+  bits via small subgroups); `hash_to_group` clears the cofactor so PSI leaks no
+  integer ratios.
 - **Fiat-Shamir** — a strong transcript binding group params, statement and
   verifier context (rp_id, nonce, timestamp); a deliberately *weak* variant
-  exists only for attacks #8/#9.
+  exists for illustrative weak-Fiat-Shamir tests.
 - **Commitments** — Pedersen (`g^m h^r`, perfectly hiding) and hash commitments
   (for MPC-in-the-head views).
 - **Secret sharing** — additive over `Z_{2^32}` and `Z_q`, plus 3-party
   replicated shares with PRG zero-sharing (for MPC-in-the-head).
 - **OT** — Naor-Pinkas 1-out-of-2 (the "tie Bob's hands" fix); a malicious
-  receiver cannot learn both messages (attack #6).
+  receiver cannot learn both messages.
 - **Garbled circuits** — point-and-permute + free-XOR + GRR3; adder and
   comparator, checked against plaintext evaluation.
 
@@ -120,23 +121,17 @@ across RPs. The same age claim is also proved a second way with
 
 ## Attack lab
 
-`python -m attacks.run_attacks` runs all 13 attacks against v0 and v1:
+`python -m attacks.run_attacks` runs all 7 privacy attacks against v0 and v1:
 
 | # | Attack | v1 defence |
 |---|---|---|
 | 1 | PII breach | MPC/ZK — no party holds full data |
 | 2 | Hash dictionary | DH-PSI secret exponents |
-| 3 | Non-group hash ratio leak | hash-to-group |
-| 4 | Amount snooping | additive shares + GC |
-| 5 | Access-pattern inference | ORAM / DORAM |
-| 6 | Malicious OT receiver | Naor-Pinkas constraint |
-| 7 | Nonce reuse → key recovery | fresh nonces (extractor as attack) |
-| 8 | Short-challenge forgery | full-length challenge |
-| 9 | Replay | nonce + RP id in the FS hash |
-| 10 | Credential lending | `sk` bound inside `C_sk` |
-| 11 | Sybil accounts | scoped nullifier |
-| 12 | PSI enumeration | query cap (residual limit, honestly stated) |
-| 13 | Invalid-group input | `is_member` checks |
+| 3 | Amount snooping | additive shares + GC |
+| 4 | Access-pattern inference | ORAM / DORAM |
+| 5 | Replay | nonce + RP id in the FS hash |
+| 6 | Credential lending | `sk` bound inside `C_sk` |
+| 7 | Sybil accounts | scoped nullifier |
 
 ## Stronger credentials (BBS+ upgrade)
 

@@ -1,5 +1,5 @@
-"""The thirteen attacks, each runnable against v0 (succeeds) and v1 (fails or is
-reduced).  Every v1 result cites the course property that defends it.
+"""The seven privacy attacks, each runnable against v0 (succeeds) and v1 (fails
+or is reduced).  Every v1 result cites the course property that defends it.
 """
 
 from __future__ import annotations
@@ -77,9 +77,9 @@ def _a2(candidate_ids: list[str] | None = None):
 
 
 # ==========================================================================
-# 4. Amount snooping
+# 3. Amount snooping
 # ==========================================================================
-def _a4(amount: int = 5000):
+def _a3(amount: int = 5000):
     def v0():
         sys = _sample_v0()
         sys.bank_amounts[sha256_id("ID-1002")] = [amount, 50]
@@ -95,13 +95,13 @@ def _a4(amount: int = 5000):
         return Outcome(False, "0 amounts",
                        f"server share {s0} is uniform")
 
-    return Attack(4, "Amount snooping", "additive shares + GC", v0, v1)
+    return Attack(3, "Amount snooping", "additive shares + GC", v0, v1)
 
 
 # ==========================================================================
-# 5. Access-pattern inference (Zipf workload)
+# 4. Access-pattern inference (Zipf workload)
 # ==========================================================================
-def _a5():
+def _a4():
     def _zipf_sequence(n_idx, length):
         # heavily skewed: index 0 is very hot
         weights = [1.0 / (k + 1) for k in range(n_idx)]
@@ -150,13 +150,13 @@ def _a5():
         return Outcome(beats_chance, f"~chance ({1/n_idx:.2f})",
                        "physical trace is permuted (ORAM)")
 
-    return Attack(5, "Access-pattern infer", "ORAM / DORAM", v0, v1)
+    return Attack(4, "Access-pattern infer", "ORAM / DORAM", v0, v1)
 
 
 # ==========================================================================
-# 9. Replay to a different RP / session
+# 5. Replay to a different RP / session
 # ==========================================================================
-def _a9():
+def _a5():
     issuer = cr.Issuer("gov-issuer")
     wallet = cr.Wallet(dob=20000101, nationality=91, kyc_level=3)
     wallet.store_credential(cr.issue(issuer, wallet.issuance_request(), 20301231))
@@ -179,13 +179,13 @@ def _a9():
         ok = cr.verify_presentation(pres, reqB, issuer.ipk)
         return Outcome(ok, "rejected", "rp_id/nonce in FS hash")
 
-    return Attack(9, "Replay", "nonce + RP id in FS hash", v0, v1)
+    return Attack(5, "Replay", "nonce + RP id in FS hash", v0, v1)
 
 
 # ==========================================================================
-# 10. Credential lending (Bob presents Alice's credential)
+# 6. Credential lending (Bob presents Alice's credential)
 # ==========================================================================
-def _a10():
+def _a6():
     issuer = cr.Issuer("gov-issuer")
     alice = cr.Wallet(dob=20000101, nationality=91, kyc_level=3)
     alice.store_credential(cr.issue(issuer, alice.issuance_request(), 20301231))
@@ -211,13 +211,13 @@ def _a10():
             ok = False
         return Outcome(ok, "rejected", "sk bound inside C_sk")
 
-    return Attack(10, "Credential lending", "sk bound in C_sk", v0, v1)
+    return Attack(6, "Credential lending", "sk bound in C_sk", v0, v1)
 
 
 # ==========================================================================
-# 11. Sybil accounts at one RP
+# 7. Sybil accounts at one RP
 # ==========================================================================
-def _a11(attempts: int = 5):
+def _a7(attempts: int = 5):
     issuer = cr.Issuer("gov-issuer")
     wallet = cr.Wallet(dob=20000101, nationality=91, kyc_level=3)
     wallet.store_credential(cr.issue(issuer, wallet.issuance_request(), 20301231))
@@ -240,11 +240,11 @@ def _a11(attempts: int = 5):
                 created += 1
         return Outcome(created > 1, f"{created} account", "scoped nullifier")
 
-    return Attack(11, "Sybil accounts", "scoped nullifier nu=H2G(rp)^sk", v0, v1)
+    return Attack(7, "Sybil accounts", "scoped nullifier nu=H2G(rp)^sk", v0, v1)
 
 
 def build_attacks() -> list[Attack]:
-    return [_a1(), _a2(), _a4(), _a5(), _a9(), _a10(), _a11()]
+    return [_a1(), _a2(), _a3(), _a4(), _a5(), _a6(), _a7()]
 
 
 def run_attack(number: int, system: str, **parameters) -> Outcome:
@@ -252,11 +252,11 @@ def run_attack(number: int, system: str, **parameters) -> Outcome:
     factories = {
         1: _a1,
         2: lambda: _a2(parameters.get("candidate_ids")),
-        4: lambda: _a4(parameters.get("amount", 5000)),
+        3: lambda: _a3(parameters.get("amount", 5000)),
+        4: _a4,
         5: _a5,
-        9: _a9,
-        10: _a10,
-        11: lambda: _a11(parameters.get("attempts", 5)),
+        6: _a6,
+        7: lambda: _a7(parameters.get("attempts", 5)),
     }
     if system not in {"v0", "v1"}:
         raise ValueError(f"Unknown attack target: {system}")

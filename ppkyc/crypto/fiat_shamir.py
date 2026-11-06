@@ -3,14 +3,15 @@
 A :class:`Transcript` absorbs length-prefixed, domain-separated messages and
 squeezes out a challenge in ``Z_q``.  The *strong* transcript binds the group
 parameters, the statement, the verifier context (RP id, nonce, timestamp) and
-every first message, which is what defeats replay (attack #9).
+every first message, which is what defeats replay (attack #5).
 
-Two deliberately broken variants live here *only* for the attack lab:
+Two deliberately broken variants live here for illustrative weak-Fiat-Shamir
+tests:
 
-* ``WeakTranscript(truncate_bits=t)`` emits a ``t``-bit challenge, enabling the
-  short-challenge forgery (attack #8).
+* ``WeakTranscript(truncate_bits=t)`` emits a ``t``-bit challenge, enabling
+  short-challenge forgery.
 * ``WeakTranscript(bind_context=False)`` drops the verifier context so a proof
-  can be replayed to another RP/session (attack #9).
+  can be replayed to another RP/session (the replay attack, #5).
 """
 
 from __future__ import annotations
@@ -75,8 +76,8 @@ class Transcript:
 class WeakTranscript(Transcript):
     """Broken transcript kept solely for the attack lab.
 
-    * ``truncate_bits`` -- reduce the challenge to this many bits (attack #8).
-    * ``bind_context=False`` -- do not bind rp_id/nonce/timestamp (attack #9).
+    * ``truncate_bits`` -- reduce the challenge to this many bits (short-challenge forgery).
+    * ``bind_context=False`` -- do not bind rp_id/nonce/timestamp (replay, attack #5).
     """
 
     def __init__(self, domain: str, truncate_bits: int | None = None,

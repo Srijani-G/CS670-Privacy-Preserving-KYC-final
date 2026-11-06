@@ -6,11 +6,11 @@ genuinely succeed against them:
 * a central SQLite table of full PII, with ``SHA-256(national_id)`` as the join
   key (attack #1 breach, #2 hash dictionary);
 * a watchlist check that is just ``sha256(id) in set`` (attack #2);
-* a central risk engine that receives raw per-bank amounts (attack #4);
+* a central risk engine that receives raw per-bank amounts (attack #3);
 * a registry queried by plaintext index with server-side access logging
-  (attack #5);
+  (attack #4);
 * bearer-token sessions and a "document upload" as an age proof, with no nonce
-  or RP binding (attacks #9, #10, #11).
+  or RP binding (attacks #5, #6, #7).
 """
 
 from __future__ import annotations

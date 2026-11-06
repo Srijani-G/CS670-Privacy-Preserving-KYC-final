@@ -78,7 +78,7 @@ def schnorr_simulate(h: int, e: int | None = None) -> SchnorrProof:
 def schnorr_extract(a: int, e1: int, z1: int, e2: int, z2: int) -> int:
     """Special-soundness extractor: w = (z1 - z2)/(e1 - e2) mod q.
 
-    This is attack #7 turned into a tool: two accepting transcripts that reuse
+    This is the nonce-reuse pitfall turned into a tool: two accepting transcripts that reuse
     the nonce ``r`` (same ``a``) reveal the secret key.
     """
     assert e1 != e2, "challenges must differ"

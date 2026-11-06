@@ -8,12 +8,12 @@ protocol but tries to learn more than it should from its own *view* (the message
 it sends and receives). The `Channel` class records every message so each party's
 view is available for the leakage checks and simulator sketches.
 
-Malicious behaviour is demonstrated **only in the attack lab**, not claimed for
-the whole system:
+Malicious behaviour is addressed in the implementation but is not demonstrated
+as separate attack-lab scenarios:
 
-- malicious OT receiver (attack #6) — stopped by the Naor-Pinkas constraint;
-- cheating ZK prover (attacks #7, #8, #13) — stopped by full-length challenges,
-  fresh nonces and subgroup-membership checks.
+- a malicious OT receiver is stopped by the Naor-Pinkas constraint;
+- a cheating ZK prover is stopped by full-length challenges, fresh nonces and
+  subgroup-membership checks.
 
 ## What each module leaks (claimed leakage)
 
@@ -61,7 +61,7 @@ matching; UI trust; key management.
   cannot link an issued credential to any later presentation. BBS+ needs a
   bilinear pairing (`py_ecc` BLS12-381), the one exception to the pure-stdlib
   rule; full CL and re-randomisable signatures remain the production reference.
-- **PSI enumeration (attack #12)** — a malicious bank can submit the whole
+- **PSI enumeration** — a malicious bank can submit the whole
   identifier space to learn the watchlist; PSI cannot prevent this
   cryptographically. v1 only *mitigates* it with authenticated queries, a cap on
   `|Q|` per window and an audit log.

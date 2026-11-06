@@ -24,9 +24,9 @@ covering:
 * scoped nullifier ``nu = H2G(rp_id)^sk`` with a DLEQ-style proof tying ``sk``
   inside ``C_sk`` to the exponent of ``nu``.
 
-Binding the proof to ``(rp_id, nonce, timestamp)`` defeats replay (attack #9);
-tying ``sk`` inside ``C_sk`` gives holder binding (attack #10); the nullifier
-gives per-RP sybil resistance (attack #11) while staying unlinkable across RPs.
+Binding the proof to ``(rp_id, nonce, timestamp)`` defeats replay (attack #5);
+tying ``sk`` inside ``C_sk`` gives holder binding (attack #6); the nullifier
+gives per-RP sybil resistance (attack #7) while staying unlinkable across RPs.
 """
 
 from __future__ import annotations

@@ -99,7 +99,7 @@ ATTACK_GUIDES = [
         "inputs": [{"name": "candidate_ids", "label": "Attacker's candidate IDs", "type": "textarea", "default": "ID-1001\nID-9999", "help": "One fictional ID per line. ID-9999 is included in the demo watchlist."}],
     },
     {
-        "number": 4,
+        "number": 3,
         "name": "Amount snooping",
         "use_case": "Banks should jointly compute a risk flag without giving a central service their raw balances.",
         "what_happens": "A server inspects one bank's amount in the naive service and a random additive share in the private demo.",
@@ -110,7 +110,7 @@ ATTACK_GUIDES = [
         "inputs": [{"name": "amount", "label": "Fictional bank amount", "type": "number", "default": 5000, "help": "Choose a value from 0 to 10,000."}],
     },
     {
-        "number": 5,
+        "number": 4,
         "name": "Access-pattern inference",
         "use_case": "A cloud host should not infer which customer record is accessed from repeated reads.",
         "what_happens": "A skewed read workload is logged directly in v0 and passed through a square-root ORAM in v1.",
@@ -121,7 +121,7 @@ ATTACK_GUIDES = [
         "inputs": [],
     },
     {
-        "number": 9,
+        "number": 5,
         "name": "Cross-party replay",
         "use_case": "A valid presentation for one relying party must not be replayable to another.",
         "what_happens": "The attacker reuses a bearer-style proof at another relying party and compares it with a context-bound proof.",
@@ -132,7 +132,7 @@ ATTACK_GUIDES = [
         "inputs": [],
     },
     {
-        "number": 10,
+        "number": 6,
         "name": "Credential lending",
         "use_case": "A credential should prove its legitimate holder is presenting it.",
         "what_happens": "Bob attempts to use Alice's credential without knowing the secret key committed inside it.",
@@ -143,7 +143,7 @@ ATTACK_GUIDES = [
         "inputs": [],
     },
     {
-        "number": 11,
+        "number": 7,
         "name": "Sybil account creation",
         "use_case": "One credential holder should not create multiple accounts at the same relying party.",
         "what_happens": "The attacker makes repeated account attempts using the same identity.",
