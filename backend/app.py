@@ -242,7 +242,7 @@ def private_registry_read(request: RegistryRequest) -> dict:
     value = RegistryClient(s0, s1).read(request.index, channel)
     return {
         "status_code": value,
-        "status_label": {0: "Not verified", 1: "Basic", 2: "Enhanced", 3: "Fully verified"}[value],
+        "status_label": {0: "Pending", 1: "Verified", 2: "Rejected", 3: "Under review"}[value],
         "registry_size": len(request.records),
         "protocol_messages": channel.rounds(),
         "communication_bytes": channel.total_bytes(),
