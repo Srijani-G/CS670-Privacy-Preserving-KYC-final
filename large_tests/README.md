@@ -47,7 +47,6 @@ take around a minute or longer; actual time depends on the computer and may
 vary.
 
 The runner reports the number of cases processed, elapsed time for the naive
-and privacy-preserving implementations, and whether their results agree.
-Module D may report different decisions: the naive document check can accept a
-case that fails the credential policy, which is an intentional demonstration
-of a naive false accept rather than a test failure.
+plaintext and privacy-preserving implementations, and whether their results
+agree. Module D applies the same age, nationality, and KYC-level predicates in
+both implementations; a mismatch is reported as a failed comparison.

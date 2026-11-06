@@ -36,6 +36,16 @@ def _limit(rows: list, limit: int) -> list:
     return rows[:limit]
 
 
+def _plaintext_credential_policy(row: dict[str, str], predicates: cr.Predicates,
+                                 today: int) -> bool:
+    cutoff = (today // 10000 - predicates.min_age) * 10000 + today % 10000
+    return (
+        int(row["dob"]) <= cutoff
+        and int(row["nationality"]) in predicates.allowed_nats
+        and int(row["kyc_level"]) >= predicates.min_level
+    )
+
+
 def run_module_a(limit: int) -> dict:
     data = _rows("module_a_psi.csv")
     watchlist = [row["identifier"] for row in data if row["role"] == "watchlist"]
@@ -146,20 +156,14 @@ def run_module_d(limit: int) -> dict:
     predicates = cr.Predicates(
         min_age=18, allowed_nats=[1, 44, 91], min_level=2
     )
-    naive = V0System()
-    naive_values = []
+    plaintext_values = []
     private_values = []
 
     start = time.perf_counter()
     for row in cases:
-        national_id = row["national_id"]
-        naive.add_customer(
-            national_id, row["case_id"], int(row["dob"]),
-            str(row["nationality"]), int(row["kyc_level"]),
+        plaintext_values.append(
+            _plaintext_credential_policy(row, predicates, TODAY)
         )
-        if row["document_present"] == "1":
-            naive.documents[sha256_id(national_id)] = b"synthetic-document"
-        naive_values.append(naive.present_age(national_id, claimed_age=18))
     naive_seconds = time.perf_counter() - start
 
     start = time.perf_counter()
@@ -190,23 +194,23 @@ def run_module_d(limit: int) -> dict:
             accepted = False
         private_values.append(accepted)
     private_seconds = time.perf_counter() - start
-    naive_accepts = sum(naive_values)
+    plaintext_accepts = sum(plaintext_values)
     private_accepts = sum(private_values)
     return {
         "module": "D - ZKP credentials",
         "cases": len(cases),
-        "naive_accepts": naive_accepts,
+        "plaintext_accepts": plaintext_accepts,
         "private_accepts": private_accepts,
-        "naive_false_accepts": sum(
-            naive_value and not private_value
-            for naive_value, private_value in zip(naive_values, private_values)
+        "plaintext_false_accepts": sum(
+            plaintext_value and not private_value
+            for plaintext_value, private_value in zip(plaintext_values, private_values)
         ),
-        "outputs_agree": naive_values == private_values,
-        "naive_seconds": naive_seconds,
+        "outputs_agree": plaintext_values == private_values,
+        "plaintext_seconds": naive_seconds,
         "private_seconds": private_seconds,
         "comparison_note": (
-            "Intentional security comparison: v0 accepts any uploaded document; "
-            "v1 accepts only credentials satisfying all configured predicates."
+            "The plaintext and credential implementations apply the same age, "
+            "nationality, and KYC-level predicates."
         ),
     }
 
@@ -242,28 +246,24 @@ def main() -> int:
     for module in selected:
         result = RUNNERS[module](args.limit)
         results.append(result)
+        baseline_label = "plaintext" if module == "D" else "naive"
+        baseline_seconds = result.get("plaintext_seconds", result.get("naive_seconds"))
         print(
             f"{result['module']}: "
             f"rows/cases={result.get('cases', result.get('customer_rows', result.get('queries')))}, "
             f"outputs_agree={result['outputs_agree']}, "
-            f"naive={result['naive_seconds']:.4f}s, "
+            f"{baseline_label}={baseline_seconds:.4f}s, "
             f"private={result['private_seconds']:.4f}s"
         )
         if module == "A":
             print(f"  matched rows: naive={result['naive_matches']}, "
                   f"private={result['private_matches']}")
         elif module == "D":
-            print(f"  accepted: naive={result['naive_accepts']}, "
+            print(f"  accepted: plaintext={result['plaintext_accepts']}, "
                   f"private={result['private_accepts']}, "
-                  f"naive false accepts={result['naive_false_accepts']}")
-            print("  Differences are expected when the naive document check "
-                  "accepts a claim that fails a private credential predicate.")
+                  f"plaintext false accepts={result['plaintext_false_accepts']}")
 
-    passed = all(
-        result["outputs_agree"]
-        for result in results
-        if not result["module"].startswith("D -")
-    )
+    passed = all(result["outputs_agree"] for result in results)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
