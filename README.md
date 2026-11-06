@@ -68,6 +68,24 @@ scenarios and may take a few seconds.
 | **B. Cross-bank AML analytics** | Is combined deposits above a threshold / what is the risk score, without revealing per-bank amounts or the model. | Additive shares, Du-Atallah/Beaver triples, OT, garbled circuits | [`ppkyc/mpc/`](ppkyc/mpc) |
 | **C. Private registry & documents** | Outsourced encrypted KYC docs; query a shared KYC-status registry without revealing which record. | Linear & square-root ORAM, 2-server read-only DORAM via one-hot dot products | [`ppkyc/oram/`](ppkyc/oram) |
 | **D. Verifiable claims** | Customer proves `age ≥ 18`, `nationality ∈ set`, `kyc_level ≥ 2` about issuer-signed committed attributes without showing documents. | Pedersen commitments, Schnorr, DLEQ, OR-proofs, Fiat-Shamir, MPC-in-the-head | [`ppkyc/zkp/`](ppkyc/zkp) |
+ 
+### Module C registry configuration
+
+The Module C read-only DORAM demo and correctness test use **1,024 synthetic
+customer records**. The fixture is generated deterministically (seed `670`) at
+runtime, so it is reproducible and does not require a database server or a
+persistent SQLite file. Each fictional record includes a customer ID, name,
+date of birth, nationality, KYC status, risk category, and last-review date.
+
+DORAM currently operates on an indexed integer array of KYC-status codes
+(`0` pending, `1` verified, `2` rejected, `3` under review), derived from those
+records. Both non-colluding servers receive identical copies of this 1,024-entry
+array. The richer synthetic metadata remains in the local fixture and is not
+sent as part of the DORAM query. This is an in-memory educational simulation,
+not a persistent customer database.
+
+`generate_synthetic_registry()` and `encode_registry_statuses()` in
+`ppkyc/oram/doram_ro.py` define the fixture and its DORAM representation.
 
 ## Repository layout
 
