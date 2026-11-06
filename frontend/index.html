@@ -22,7 +22,8 @@
         <button class="nav-item" data-panel="aml"><span class="nav-icon">03</span> AML analytics</button>
         <button class="nav-item" data-panel="registry"><span class="nav-icon">04</span> Private registry</button>
         <button class="nav-item" data-panel="credential"><span class="nav-icon">05</span> KYC credentials</button>
-        <button class="nav-item" data-panel="attacks"><span class="nav-icon">06</span> Attack lab</button>
+        <button class="nav-item" data-panel="credbbs"><span class="nav-icon">06</span> Unlinkable credentials</button>
+        <button class="nav-item" data-panel="attacks"><span class="nav-icon">07</span> Attack lab</button>
       </nav>
       <div class="sidebar-footer">
         <span class="status-dot" id="api-dot"></span>
@@ -143,6 +144,26 @@ Bob|19880808|US</textarea>
             <button class="button button-primary" type="submit">Issue and verify proof <span>-&gt;</span></button>
           </form>
           <div class="card result-card" id="credential-result"><div class="result-placeholder"><span class="placeholder-icon">D</span><h3>Your result will appear here</h3><p>The proof checks the demo policy: age 18+, allowed nationality, and KYC level 2+.</p></div></div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-credbbs">
+        <div class="page-intro"><div class="eyebrow">MODULE D+ / BBS+ UNLINKABLE CREDENTIAL</div><h1>Unlinkable credentials</h1><p>A BBS+ credential (BLS12-381 pairings) that closes two privacy gaps of the sigma credential: the issuer never sees the wallet secret (blind issuance), and every showing is re-randomised so relying parties cannot link your visits.</p></div>
+        <div class="algorithm-card" id="guide-credbbs" data-guide="credbbs" aria-live="polite"></div>
+        <div class="work-grid">
+          <form class="card form-card" id="credbbs-form">
+            <div class="card-heading"><span class="card-icon icon-green">D+</span><div><h2>Issue blindly, then present twice</h2><p>Fictional details stay in this local demo.</p></div></div>
+            <label for="credbbs-dob">Date of birth</label>
+            <input id="credbbs-dob" type="date" value="2003-06-15" required>
+            <label for="credbbs-nationality">Nationality code <span class="label-hint">demo accepts 1, 44, or 91</span></label>
+            <input id="credbbs-nationality" type="number" min="0" max="999" value="91" required>
+            <label for="credbbs-level">KYC level <span class="label-hint">0 to 15</span></label>
+            <input id="credbbs-level" type="number" min="0" max="15" value="3" required>
+            <label for="credbbs-rp">Relying party</label>
+            <input id="credbbs-rp" value="demo-bank" maxlength="64" required>
+            <button class="button button-primary" type="submit">Issue blindly and present <span>-&gt;</span></button>
+          </form>
+          <div class="card result-card" id="credbbs-result"><div class="result-placeholder"><span class="placeholder-icon">D+</span><h3>Your result will appear here</h3><p>The issuer signs without seeing your secret; the credential is then shown twice at one bank and once at another.</p></div></div>
         </div>
       </section>
 

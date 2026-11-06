@@ -15,7 +15,9 @@ from ppkyc.channel import Channel
 from ppkyc.mpc.pipeline import run_pipeline
 from ppkyc.oram.doram_ro import RegistryClient, RegistryServer
 from ppkyc.psi.dh_psi import deduplicate_identifiers, run_psi
+from ppkyc.zkp import bbs
 from ppkyc.zkp import credential as cr
+from ppkyc.zkp import credential_bbs as cb
 
 app = FastAPI(
     title="Privacy-Preserving KYC Demo API",
@@ -57,6 +59,13 @@ class CredentialRequest(BaseModel):
     relying_party: str = Field(default="demo-bank", min_length=1, max_length=64)
 
 
+class CredentialBbsRequest(BaseModel):
+    dob: int = Field(ge=19000101, le=20261106)
+    nationality: int = Field(ge=0, le=999)
+    kyc_level: int = Field(ge=0, le=15)
+    relying_party: str = Field(default="demo-bank", min_length=1, max_length=64)
+
+
 class AttackRunRequest(BaseModel):
     system: str = Field(pattern="^(v0|v1)$")
     candidate_ids: list[str] = Field(default_factory=list, max_length=100)
@@ -90,17 +99,6 @@ ATTACK_GUIDES = [
         "inputs": [{"name": "candidate_ids", "label": "Attacker's candidate IDs", "type": "textarea", "default": "ID-1001\nID-9999", "help": "One fictional ID per line. ID-9999 is included in the demo watchlist."}],
     },
     {
-        "number": 3,
-        "name": "Non-group hash leakage",
-        "use_case": "A PSI encoding must not expose algebraic relationships between identifiers.",
-        "what_happens": "The demo contrasts structurally transparent integer hashing with the project's hash-to-group operation.",
-        "v0": "Integer hashing preserves a multiplicative relation that the illustrative attacker can detect.",
-        "v1": "Cofactor-cleared subgroup elements do not expose that integer ratio relation.",
-        "defence": "Hash identifiers into the prime-order group",
-        "steps": ["Hash sample identifiers as ordinary integers.", "Check the algebraic relation in the naive construction.", "Repeat with subgroup hash-to-group elements."],
-        "inputs": [],
-    },
-    {
         "number": 4,
         "name": "Amount snooping",
         "use_case": "Banks should jointly compute a risk flag without giving a central service their raw balances.",
@@ -120,39 +118,6 @@ ATTACK_GUIDES = [
         "v1": "The ORAM permutes records and hides the logical index from the observed trace.",
         "defence": "Oblivious RAM access patterns",
         "steps": ["Generate a skewed sequence of logical record reads.", "Inspect the naive physical access log.", "Compare with the ORAM's permuted physical trace."],
-        "inputs": [],
-    },
-    {
-        "number": 6,
-        "name": "Malicious OT receiver",
-        "use_case": "An OT receiver should learn only its selected input, not both alternatives.",
-        "what_happens": "The demo compares independently chosen public keys with the Naor-Pinkas key relation.",
-        "v0": "A receiver that knows both key exponents can decrypt both messages.",
-        "v1": "The receiver obtains its chosen message; learning the other requires the sender's secret exponent.",
-        "defence": "Naor-Pinkas constrains the receiver's keys",
-        "steps": ["The sender prepares two alternative secret messages.", "Try the unconstrained two-key receiver.", "Use the constrained OT and check what the receiver learns."],
-        "inputs": [],
-    },
-    {
-        "number": 7,
-        "name": "Nonce reuse",
-        "use_case": "Proof and signature randomness must be fresh; reusing a Schnorr nonce can expose a secret key.",
-        "what_happens": "The attacker applies the special-soundness extractor to two transcripts that reuse one commitment.",
-        "v0": "Two accepting transcripts reveal the signing witness when the nonce is reused.",
-        "v1": "Fresh proof nonces produce different commitments, so this paired-transcript extraction does not apply.",
-        "defence": "Fresh random nonces",
-        "steps": ["Create two transcripts that reuse one nonce.", "Extract the witness from the two responses.", "Compare with two fresh independently randomized proofs."],
-        "inputs": [],
-    },
-    {
-        "number": 8,
-        "name": "Short-challenge forgery",
-        "use_case": "Fiat-Shamir challenges must be sufficiently large to make proof guessing infeasible.",
-        "what_happens": "The demo searches for an accepting Schnorr transcript under a deliberately tiny challenge space.",
-        "v0": "The short challenge permits a practical transcript-guessing demonstration.",
-        "v1": "The production-sized challenge makes the same search infeasible; the demo models this with a bounded search.",
-        "defence": "Full-length Fiat-Shamir challenges",
-        "steps": ["Pick a proof response without knowing the witness.", "Search for a matching 10-bit challenge.", "Explain why the same search is infeasible at full challenge length."],
         "inputs": [],
     },
     {
@@ -187,31 +152,6 @@ ATTACK_GUIDES = [
         "defence": "Per-relying-party nullifier",
         "steps": ["Choose how many account attempts to make.", "Open accounts without a uniqueness check in v0.", "Use one scoped nullifier per credential at the protected relying party."],
         "inputs": [{"name": "attempts", "label": "Account creation attempts", "type": "number", "default": 5, "help": "Choose between 1 and 25 attempts."}],
-    },
-    {
-        "number": 12,
-        "name": "PSI query enumeration",
-        "use_case": "A legitimate PSI client can still abuse repeated queries to discover a watchlist.",
-        "what_happens": "The attacker searches a chosen identifier range; v1 limits each query window but cannot cryptographically eliminate enumeration.",
-        "v0": "An unrestricted dictionary search can recover watchlist entries in the selected range.",
-        "v1": "Only the first 100 demo queries are allowed; enumeration remains a documented residual risk.",
-        "defence": "Query cap, authentication, and audit (partial mitigation)",
-        "steps": ["Choose a starting ID and search-range size.", "Search the whole range against the naive hashed watchlist.", "Apply the query-window cap and observe that this is mitigation, not a complete fix."],
-        "inputs": [
-            {"name": "range_start", "label": "Starting ID number", "type": "number", "default": 7000, "help": "IDs are generated as ID-number."},
-            {"name": "range_count", "label": "Number of IDs to try", "type": "number", "default": 3000, "help": "Choose between 1 and 10,000 candidates."},
-        ],
-    },
-    {
-        "number": 13,
-        "name": "Invalid-group input",
-        "use_case": "Verifiers must reject group elements outside the expected prime-order subgroup.",
-        "what_happens": "The demo submits an order-2 element to a verifier with and without subgroup validation.",
-        "v0": "An unchecked verifier accepts an element that is not in the expected subgroup.",
-        "v1": "The group-membership check rejects the invalid element before it is used.",
-        "defence": "Validate every received group element",
-        "steps": ["Construct an element outside the expected subgroup.", "Pass it to the naive verifier without validation.", "Check subgroup membership and reject it in v1."],
-        "inputs": [],
     },
 ]
 
@@ -359,6 +299,79 @@ def verify_credential(request: CredentialRequest) -> dict:
         "proof_generated": True,
         "relying_party": request.relying_party,
         "privacy_note": "The relying party learns the predicate result, not the date of birth.",
+    }
+
+
+def _bbs_fingerprint(point) -> str:
+    """Short, stable hex tag for a group point (for showing (un)linkability)."""
+    return bbs._ser(point).hex()[:16]
+
+
+@app.post("/api/credential-bbs")
+def verify_credential_bbs(request: CredentialBbsRequest) -> dict:
+    """BBS+ credential: blind issuance (#2) + multi-show unlinkability (#1).
+
+    Issues one credential (the issuer never sees the wallet secret `sk`), then
+    presents it twice to the same relying party and once to a different one, so
+    the frontend can show: the two shows look different (unlinkable), the per-RP
+    nullifier blocks a second account, and different RPs get unlinkable
+    nullifiers.
+    """
+    today = int(date.today().strftime("%Y%m%d"))
+    if request.dob > today:
+        raise HTTPException(status_code=422, detail="Date of birth cannot be in the future.")
+
+    issuer = cb.Issuer("demo-issuer")
+    wallet = cb.Wallet(
+        dob=request.dob,
+        nationality=request.nationality,
+        kyc_level=request.kyc_level,
+    )
+    # Blind issuance: the issuer signs a commitment to `sk` and never learns it.
+    cb.issue(
+        issuer,
+        wallet,
+        expected={"dob": request.dob, "nat": request.nationality, "level": request.kyc_level},
+    )
+
+    other_rp = "other-bank" if request.relying_party != "other-bank" else "second-bank"
+    rp_a = cb.RelyingParty(request.relying_party, issuer.pk, allowed_nats=[1, 44, 91])
+    rp_b = cb.RelyingParty(other_rp, issuer.pk, allowed_nats=[1, 44, 91])
+
+    show1 = cb.present(wallet, cb.PresentationRequest(request.relying_party, disclose=(cb.NAT,)))
+    accepted1 = rp_a.verify(show1)
+    show2 = cb.present(wallet, cb.PresentationRequest(request.relying_party, disclose=(cb.NAT,)))
+    accepted2 = rp_a.verify(show2)
+    show_other = cb.present(wallet, cb.PresentationRequest(other_rp, disclose=(cb.NAT,)))
+    rp_b.verify(show_other)
+
+    fp1, fp2 = _bbs_fingerprint(show1.Ap), _bbs_fingerprint(show2.Ap)
+    nu_here, nu_other = _bbs_fingerprint(show1.nu), _bbs_fingerprint(show_other.nu)
+    return {
+        "accepted": accepted1,
+        "relying_party": request.relying_party,
+        "other_relying_party": other_rp,
+        "disclosed_nationality": show1.disclosed.get(cb.NAT),
+        "issuer_saw_sk": False,
+        "show1_fingerprint": fp1,
+        "show2_fingerprint": fp2,
+        "shows_unlinkable": fp1 != fp2,
+        "nullifier_here": nu_here,
+        "nullifier_other": nu_other,
+        "second_show_accepted": accepted2,
+        "sybil_blocked": bool(accepted1 and not accepted2),
+        "cross_rp_unlinkable": nu_here != nu_other,
+        "privacy_note": (
+            "The issuer signs a commitment to the wallet secret and never sees it "
+            "(blind issuance); each showing re-randomises the signature, so two shows "
+            "are unlinkable, while the per-relying-party nullifier still blocks a "
+            "second account at the same bank."
+        ),
+        "scope_note": (
+            "BBS+ here proves possession of a validly-issued credential and discloses "
+            "nationality; proving a hidden threshold such as age>=18 without revealing "
+            "the value needs pairing-group range proofs (Bulletproofs), a future step."
+        ),
     }
 
 

@@ -4,18 +4,13 @@ reduced).  Every v1 result cites the course property that defends it.
 
 from __future__ import annotations
 
-import hashlib
 import secrets
 
 from .harness import Attack, Outcome
 
-from ppkyc.crypto.group import GROUP, GroupError
+from ppkyc.crypto.group import GROUP
 from ppkyc.crypto.commit import PEDERSEN
-from ppkyc.crypto.fiat_shamir import Transcript, WeakTranscript
-from ppkyc.crypto import ot as otmod
-from ppkyc.zkp import schnorr
 from ppkyc.zkp import credential as cr
-from ppkyc.psi.dh_psi import run_psi
 from ppkyc.kyc_naive.v0 import V0System, sha256_id
 from ppkyc.oram.doram_ro import RegistryServer, RegistryClient
 from ppkyc.oram.sqrt import SqrtORAM
@@ -79,35 +74,6 @@ def _a2(candidate_ids: list[str] | None = None):
                        "secret exponent b unknown")
 
     return Attack(2, "Hash dictionary", "DH-PSI secret exponents", v0, v1)
-
-
-# ==========================================================================
-# 3. Non-group hash ratio leak
-# ==========================================================================
-def _a3():
-    def v0():
-        # naive PSI that hashes identifiers to plain integers and exponentiates
-        # with a shared multiplicative structure -> ratios leak equality of
-        # differences. We show two equal ratios become detectable.
-        def ih(x):  # integer hash (NOT into the group)
-            return int.from_bytes(hashlib.sha256(x).digest(), "big")
-        a = 7  # small shared exponent (illustrative)
-        x1, x2, y1, y2 = b"aa", b"bb", b"cc", b"dd"
-        # if ih(x1)/ih(x2) == ih(y1)/ih(y2) an attacker can correlate; here we
-        # simply show the mapping is a deterministic, structure-preserving int.
-        leaked = (pow(ih(x1), a) * pow(ih(x2), a)) == pow(ih(x1) * ih(x2), a)
-        return Outcome(leaked, "relation learned",
-                       "integer hash is multiplicatively structured")
-
-    def v1():
-        # hash-to-group clears the cofactor; elements are opaque subgroup
-        # members with no usable integer ratio.
-        h1 = GROUP.hash_to_group(b"aa")
-        h2 = GROUP.hash_to_group(b"bb")
-        structured = (GROUP.mul(h1, h2) == GROUP.hash_to_group(b"aabb"))
-        return Outcome(structured, "no relation", "hash-to-group (slides 47-48)")
-
-    return Attack(3, "Non-group hash leak", "hash-to-group", v0, v1)
 
 
 # ==========================================================================
@@ -185,106 +151,6 @@ def _a5():
                        "physical trace is permuted (ORAM)")
 
     return Attack(5, "Access-pattern infer", "ORAM / DORAM", v0, v1)
-
-
-# ==========================================================================
-# 6. Malicious OT receiver
-# ==========================================================================
-def _a6():
-    def v0():
-        # naive OT: receiver sends PK_0 and PK_1 independently, both g^k_i, so it
-        # knows both discrete logs and decrypts both messages.
-        m0, m1 = b"secret-zero-----", b"secret-one------"
-        k0, k1 = GROUP.rand_scalar(), GROUP.rand_scalar()
-        pk0, pk1 = GROUP.exp(GROUP.g, k0), GROUP.exp(GROUP.g, k1)
-        # sender encrypts under pk0, pk1
-        enc = []
-        for pk, m in ((pk0, m0), (pk1, m1)):
-            r = GROUP.rand_scalar()
-            gr = GROUP.exp(GROUP.g, r)
-            key = otmod._kdf(GROUP.exp(pk, r), len(m))
-            enc.append((gr, otmod._xor(key, m)))
-        # receiver decrypts BOTH
-        got = []
-        for (gr, c), k in zip(enc, (k0, k1)):
-            got.append(otmod._xor(otmod._kdf(GROUP.exp(gr, k), len(c)), c))
-        both = got[0] == m0 and got[1] == m1
-        return Outcome(both, "m0 and m1", "receiver knew both dlogs")
-
-    def v1():
-        # Naor-Pinkas: PK_1 = C/PK_0, so the receiver cannot know both dlogs
-        # without log C. It learns only m_b.
-        m0, m1 = b"secret-zero-----", b"secret-one------"
-        got_b = otmod.ot_1of2(m0, m1, 0)
-        # attacker tries to also get m1: it would need log of PK_1 = C/PK_0.
-        learned_both = False  # infeasible under the DH constraint
-        return Outcome(learned_both, "only m_b", "Naor-Pinkas constraint (slide 33)")
-
-    return Attack(6, "Malicious OT receiver", "Naor-Pinkas tie", v0, v1)
-
-
-# ==========================================================================
-# 7. Nonce reuse -> key recovery (special-soundness extractor as attack)
-# ==========================================================================
-def _a7():
-    def v0():
-        w = GROUP.rand_scalar()
-        h = GROUP.exp(GROUP.g, w)
-        # deterministic / reused nonce r across two different challenges
-        r, a = schnorr.schnorr_commit(w)
-        e1, e2 = GROUP.rand_scalar(), GROUP.rand_scalar()
-        z1 = schnorr.schnorr_respond(r, w, e1)
-        z2 = schnorr.schnorr_respond(r, w, e2)
-        recovered = schnorr.schnorr_extract(a, e1, z1, e2, z2)
-        return Outcome(recovered == w, "sk recovered", "nonce r reused")
-
-    def v1():
-        # fresh random nonce each time -> two transcripts never share 'a',
-        # so the extractor has no two-transcript pair to use.
-        w = GROUP.rand_scalar()
-        h = GROUP.exp(GROUP.g, w)
-        p1 = schnorr.schnorr_prove_fs(w, h)
-        p2 = schnorr.schnorr_prove_fs(w, h)
-        return Outcome(p1.a == p2.a, "no reuse", "fresh random nonces")
-
-    return Attack(7, "Nonce reuse", "fresh nonces / extractor", v0, v1)
-
-
-# ==========================================================================
-# 8. Short-challenge forgery (weak Fiat-Shamir)
-# ==========================================================================
-def _a8():
-    t_bits = 10  # small challenge space -> forgeable (~2^10 tries)
-
-    def _forge(truncate):
-        h = GROUP.rand_element()  # no witness known
-        # Weak-FS forgery: pick random (e, z), set a = g^z h^{-e}; accept when
-        # the truncated challenge H(h, a) equals the chosen e.  P(hit)=2^-t.
-        tries = 0
-        for _ in range(60 * (1 << truncate)):
-            tries += 1
-            e = secrets.randbelow(1 << truncate)
-            z = GROUP.rand_scalar()
-            a = GROUP.mul(GROUP.exp(GROUP.g, z), GROUP.exp(h, (-e) % GROUP.q))
-            tr = WeakTranscript("schnorr", truncate_bits=truncate)
-            tr.append_group("h", h).append_group("a", a)
-            if tr.challenge() == e:
-                # verify the forged transcript actually accepts
-                ok = schnorr.schnorr_verify(h, a, e, z)
-                return ok, tries, (h, a, z, e)
-        return False, tries, None
-
-    def v0():
-        ok, tries, _ = _forge(t_bits)
-        return Outcome(ok, f"forged in ~{tries}", f"{t_bits}-bit challenge")
-
-    def v1():
-        # full-length challenge: the same search is infeasible; emulate by
-        # bounding the attempt budget far below 2^256.
-        ok, tries, _ = (False, 1 << 20, None)
-        return Outcome(ok, "infeasible", "full-length challenge")
-
-    return Attack(8, "Short-challenge forgery", "full-length challenge", v0, v1)
 
 
 # ==========================================================================
@@ -377,59 +243,8 @@ def _a11(attempts: int = 5):
     return Attack(11, "Sybil accounts", "scoped nullifier nu=H2G(rp)^sk", v0, v1)
 
 
-# ==========================================================================
-# 12. PSI enumeration (partially mitigated, honest limitation)
-# ==========================================================================
-def _a12(range_start: int = 7000, range_count: int = 3000, cap: int = 100):
-    watchlist = ["ID-9999", "ID-8888", "ID-7777"]
-
-    def v0():
-        sys = _sample_v0()
-        sys.watchlist = {sha256_id(w) for w in watchlist}
-        # malicious bank enumerates the whole id space against sha256 watchlist
-        learned = [f"ID-{n}" for n in range(range_start, range_start + range_count)
-                   if sha256_id(f"ID-{n}") in sys.watchlist]
-        return Outcome(len(learned) == len(watchlist), f"{len(learned)} entries",
-                       "full watchlist enumerated")
-
-    def v1():
-        # DH-PSI does not cryptographically stop enumeration, but v1 caps |Q|.
-        huge_query = [f"ID-{n}" for n in range(range_start, range_start + range_count)]
-        allowed = huge_query[:cap]  # query cap enforced by the regulator
-        matched = run_psi(watchlist, allowed)
-        return Outcome(len(matched) >= 1, f"<= {cap}/window (capped)",
-                       "query cap + auth + audit (residual)")
-
-    return Attack(12, "PSI enumeration", "query cap (residual limit)", v0, v1)
-
-
-# ==========================================================================
-# 13. Invalid-group input
-# ==========================================================================
-def _a13():
-    def v0():
-        # a verifier with NO membership check accepts an element of small order.
-        bad = GROUP.p - 1  # order 2 element (not in order-q subgroup)
-        accepted = True    # naive code just uses it in pow()
-        # demonstrate it is indeed outside the subgroup
-        outside = pow(bad, GROUP.q, GROUP.p) != 1
-        return Outcome(accepted and outside, "accepted", "no is_member check")
-
-    def v1():
-        bad = GROUP.p - 1
-        try:
-            GROUP.check_member(bad, "received element")
-            accepted = True
-        except GroupError:
-            accepted = False
-        return Outcome(accepted, "rejected", "is_member (slides 13-15)")
-
-    return Attack(13, "Invalid-group input", "is_member checks", v0, v1)
-
-
 def build_attacks() -> list[Attack]:
-    return [_a1(), _a2(), _a3(), _a4(), _a5(), _a6(), _a7(), _a8(),
-            _a9(), _a10(), _a11(), _a12(), _a13()]
+    return [_a1(), _a2(), _a4(), _a5(), _a9(), _a10(), _a11()]
 
 
 def run_attack(number: int, system: str, **parameters) -> Outcome:
@@ -437,21 +252,11 @@ def run_attack(number: int, system: str, **parameters) -> Outcome:
     factories = {
         1: _a1,
         2: lambda: _a2(parameters.get("candidate_ids")),
-        3: _a3,
         4: lambda: _a4(parameters.get("amount", 5000)),
         5: _a5,
-        6: _a6,
-        7: _a7,
-        8: _a8,
         9: _a9,
         10: _a10,
         11: lambda: _a11(parameters.get("attempts", 5)),
-        12: lambda: _a12(
-            parameters.get("range_start", 7000),
-            parameters.get("range_count", 3000),
-            parameters.get("cap", 100),
-        ),
-        13: _a13,
     }
     if system not in {"v0", "v1"}:
         raise ValueError(f"Unknown attack target: {system}")
