@@ -138,6 +138,16 @@ def test_doram_read_only_1024_synthetic_records():
     assert all(n == 1024 for n in s1.query_log)
 
 
+def test_doram_reads_from_2048_record_registry():
+    records = [index % 4 for index in range(2048)]
+    s0, s1 = RegistryServer("S0", records), RegistryServer("S1", records)
+    client = RegistryClient(s0, s1)
+
+    assert client.read(2047) == records[2047]
+    assert s0.query_log == [2048]
+    assert s1.query_log == [2048]
+
+
 # -- attack lab ------------------------------------------------------------
 def test_attack_lab_v0_succeeds_v1_blocked():
     from attacks.attacks import build_attacks

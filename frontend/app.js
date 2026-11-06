@@ -99,6 +99,14 @@ function integersFrom(text, label) {
   return values.map(Number);
 }
 
+document.getElementById("registry-load-large").addEventListener("click", () => {
+  document.getElementById("registry-records").value = Array.from(
+    { length: 2048 },
+    (_, index) => index % 4,
+  ).join(",");
+  document.getElementById("registry-index").value = "2047";
+});
+
 function bindForm(id, resultId, pendingMessage, handler) {
   const form = document.getElementById(id);
   const target = document.getElementById(resultId);
