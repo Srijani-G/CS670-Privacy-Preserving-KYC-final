@@ -16,9 +16,55 @@ updates.  A DPF would cut the query from O(n) to O(log n) (future work).
 
 from __future__ import annotations
 
+import random
 import secrets
+from datetime import date, timedelta
 
 MOD = (1 << 127) - 1  # a Mersenne prime; registry values must be < MOD
+
+# DORAM stores compact integer status codes; metadata stays in the local fixture.
+KYC_STATUS_CODES = {"pending": 0, "verified": 1, "rejected": 2, "under_review": 3}
+KYC_STATUS_LABELS = {value: key for key, value in KYC_STATUS_CODES.items()}
+_FIRST_NAMES = ("Aarav", "Aditi", "Ananya", "Arjun", "Diya", "Ishaan", "Kabir", "Meera",
+                "Neha", "Rohan", "Sara", "Vihaan", "Zoya", "Maya", "Dev", "Ira")
+_LAST_NAMES = ("Sharma", "Verma", "Iyer", "Reddy", "Patel", "Kapoor", "Das", "Nair",
+               "Khan", "Mehta", "Rao", "Sen", "Malhotra", "Joshi", "Bose", "Menon")
+_NATIONALITIES = ("IN", "US", "GB", "SG", "AE", "CA", "AU", "DE")
+_RISK_CATEGORIES = ("low", "medium", "high")
+
+
+def generate_synthetic_registry(size: int = 1024, seed: int = 670) -> list[dict]:
+    """Generate reproducible fictional KYC records; never use real customer data."""
+    if size < 1:
+        raise ValueError("Registry size must be at least 1")
+    rng = random.Random(seed)
+    reference_date = date(2026, 11, 1)
+    statuses = ("pending", "verified", "rejected", "under_review")
+    records = []
+    for index in range(size):
+        status = rng.choices(statuses, weights=(12, 72, 6, 10), k=1)[0]
+        risk = rng.choices(_RISK_CATEGORIES, weights=(65, 27, 8), k=1)[0]
+        dob = date(1960, 1, 1) + timedelta(days=rng.randint(0, 18000))
+        reviewed = reference_date - timedelta(days=rng.randint(0, 730))
+        records.append({
+            "customer_id": f"KYC-{index + 1:06d}",
+            "full_name": f"{rng.choice(_FIRST_NAMES)} {rng.choice(_LAST_NAMES)}",
+            "date_of_birth": dob.isoformat(),
+            "nationality": rng.choice(_NATIONALITIES),
+            "kyc_status": status,
+            "risk_category": risk,
+            "last_reviewed": reviewed.isoformat(),
+        })
+    return records
+
+
+def encode_registry_statuses(records: list[dict]) -> list[int]:
+    """Convert full fixture records to the integer array queried by DORAM."""
+    try:
+        return [KYC_STATUS_CODES[record["kyc_status"]] for record in records]
+    except KeyError as exc:
+        raise ValueError(f"Unknown KYC status: {exc.args[0]}") from exc
+
 
 
 class RegistryServer:
