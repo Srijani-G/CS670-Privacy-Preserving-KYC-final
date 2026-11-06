@@ -10,7 +10,10 @@ import secrets
 from ppkyc.channel import Channel
 from ppkyc.psi.dh_psi import run_psi
 from ppkyc.mpc.pipeline import run_pipeline
-from ppkyc.oram.doram_ro import RegistryServer, RegistryClient
+from ppkyc.oram.doram_ro import (
+    RegistryServer, RegistryClient, generate_synthetic_registry,
+    encode_registry_statuses, KYC_STATUS_LABELS,
+)
 from ppkyc.zkp import credential as cr
 from attacks.attacks import build_attacks
 from attacks.harness import run_all
@@ -79,13 +82,21 @@ def demo_module_b():
 
 def demo_module_c():
     hr("Module C - Private KYC-status registry (read-only 2-server DORAM)")
-    db = [1, 0, 2, 1, 3]  # KYC status codes per record
+    records = generate_synthetic_registry(size=1024, seed=670)
+    db = encode_registry_statuses(records)
     s0, s1 = RegistryServer("S0", db), RegistryServer("S1", db)
     cli = RegistryClient(s0, s1)
     ch = Channel()
-    idx = 3
+    idx = 511
+    record = records[idx]
     val = cli.read(idx, ch)
-    print(f"Client privately reads record #{idx}: status = {val} (true value {db[idx]})")
+    print(f"Synthetic registry contains {len(records):,} fictional customer records.")
+    print(f"Both DORAM servers hold identical arrays of {len(db):,} KYC status codes.")
+    print(f"Example selected record: {record['customer_id']} | {record['full_name']} | "
+          f"{record['nationality']} | risk={record['risk_category']}")
+    print(f"Client privately reads its KYC status: {KYC_STATUS_LABELS[val]} "
+          f"(expected {record['kyc_status']})")
+    print("  DORAM accesses the integer status array; metadata stays in the local fixture.")
     print("  each server got a random one-hot share; neither learns which index.")
     print(f"  server S0 query log (vector lengths only): {s0.query_log}")
 
