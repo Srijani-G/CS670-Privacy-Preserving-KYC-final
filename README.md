@@ -16,21 +16,50 @@ used; the only library calls are hashing and randomness, as the plan allows.
 ## Quick start
 
 ```bash
-# No install needed to run the core — pure stdlib. (Optional: pip install -r requirements.txt)
+# Install the optional BBS+ and frontend API dependencies.
+python -m pip install -r requirements.txt
 python run_tests.py        # full test suite (completeness, soundness, correctness, leakage)
 python -m demo.demo        # end-to-end demo of all four modules + the attack lab
 python -m attacks.run_attacks   # just the v0-vs-v1 attack table
 python -m bench.bench      # benchmarks (sigma vs MPCitH, GC cost, DORAM bandwidth)
 ```
 
-The one exception to "pure stdlib" is the **BBS+ credential upgrade** (see
-*Stronger credentials* below), which needs a bilinear pairing and so requires
-`py_ecc`:
+The core modules use only the standard library. The **BBS+ credential upgrade**
+(see *Stronger credentials* below) requires `py_ecc`; the local web demo uses
+FastAPI and Uvicorn.
 
 ```bash
-pip install py_ecc
 python -m demo.demo_bbs    # unlinkable, blindly-issued credentials (fixes linkability + non-blind issuance)
 ```
+
+## Local web demo
+
+The static frontend calls a FastAPI backend that runs the existing protocol code.
+Each protocol page includes an interactive algorithm walkthrough and editable
+demo inputs. The attack lab lets you choose one of the 13 scenarios, inspect its
+steps, edit supported attacker inputs, and run it against v0, v1, or both. Its
+outcomes describe whether an attack succeeded; they are not test-pass indicators.
+It is a local educational demo only; do not enter real customer information.
+
+1. Install dependencies with `python -m pip install -r requirements.txt`.
+2. In one PowerShell window, start the API from the repository root:
+
+   ```powershell
+   python -m uvicorn backend.app:app --host 127.0.0.1 --port 8001 --reload
+   ```
+
+3. In a second PowerShell window, start the static frontend from the repository root:
+
+   ```powershell
+   python -m http.server 8000 --bind 127.0.0.1 --directory frontend
+   ```
+
+4. Open <http://127.0.0.1:8000> in your browser. The backend health endpoint is
+   <http://127.0.0.1:8001/api/health>, and its interactive API docs are at
+   <http://127.0.0.1:8001/docs>.
+
+Press `Ctrl+C` in each terminal to stop its server. The Attack Lab runs all 13
+scenarios and may take around a minute.
 
 ## The four modules
 

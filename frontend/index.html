@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f4">
+  <title>Private KYC | Protocol Lab</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="Private KYC home">
+        <span class="brand-mark">P</span>
+        <span>private<span class="brand-light">kyc</span></span>
+      </a>
+      <div class="side-label">PROTOCOL LAB</div>
+      <nav class="navigation" aria-label="Demo modules">
+        <button class="nav-item active" data-panel="overview"><span class="nav-icon">01</span> Overview</button>
+        <button class="nav-item" data-panel="psi"><span class="nav-icon">02</span> Sanctions screening</button>
+        <button class="nav-item" data-panel="aml"><span class="nav-icon">03</span> AML analytics</button>
+        <button class="nav-item" data-panel="registry"><span class="nav-icon">04</span> Private registry</button>
+        <button class="nav-item" data-panel="credential"><span class="nav-icon">05</span> KYC credentials</button>
+        <button class="nav-item" data-panel="attacks"><span class="nav-icon">06</span> Attack lab</button>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="status-dot" id="api-dot"></span>
+        <span id="api-status">Checking local API</span>
+        <span class="api-address">127.0.0.1:8001</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="breadcrumb">CS670 <span>/</span> Privacy-preserving KYC</div>
+        <span class="local-badge"><span class="status-dot"></span> LOCAL DEMO</span>
+      </header>
+
+      <section class="panel active" id="panel-overview">
+        <div class="hero">
+          <div class="eyebrow">A CRYPTOGRAPHIC PROTOTYPE</div>
+          <h1>Compliance, with<br><span>privacy built in.</span></h1>
+          <p class="hero-copy">Explore how privacy-preserving protocols can support KYC and AML checks without exposing more data than the task requires.</p>
+          <div class="hero-actions">
+            <button class="button button-primary" data-open="psi">Explore the protocols <span aria-hidden="true">-&gt;</span></button>
+            <span class="hero-note">Five interactive demonstrations</span>
+          </div>
+          <div class="hero-orbit orbit-one"></div>
+          <div class="hero-orbit orbit-two"></div>
+          <div class="hero-orbit orbit-three"></div>
+          <div class="hero-core"><span>DATA</span><strong>PRIVATE</strong></div>
+          <div class="orbit-tag tag-psi">DH-PSI</div>
+          <div class="orbit-tag tag-mpc">MPC</div>
+          <div class="orbit-tag tag-zkp">ZERO KNOWLEDGE</div>
+        </div>
+
+        <div class="section-heading">
+          <div><div class="eyebrow">THE PROTOCOLS</div><h2>One project. Four privacy tools.</h2></div>
+          <p>Each module answers a different compliance need.</p>
+        </div>
+        <div class="module-grid">
+          <button class="module-card" data-open="psi"><span class="card-number">MODULE A</span><span class="card-icon icon-purple">A</span><strong>Sanctions screening</strong><span>Find watchlist matches without sharing either full list.</span><span class="card-link">Try DH-PSI <b>-&gt;</b></span></button>
+          <button class="module-card" data-open="aml"><span class="card-number">MODULE B</span><span class="card-icon icon-orange">B</span><strong>AML analytics</strong><span>Compute a threshold flag over secret-shared features.</span><span class="card-link">Try secure MPC <b>-&gt;</b></span></button>
+          <button class="module-card" data-open="registry"><span class="card-number">MODULE C</span><span class="card-icon icon-blue">C</span><strong>Private registry</strong><span>Read a record while hiding its index from both servers.</span><span class="card-link">Try DORAM <b>-&gt;</b></span></button>
+          <button class="module-card" data-open="credential"><span class="card-number">MODULE D</span><span class="card-icon icon-green">D</span><strong>KYC credentials</strong><span>Verify selected claims using a zero-knowledge proof.</span><span class="card-link">Try a proof <b>-&gt;</b></span></button>
+        </div>
+        <div class="notice"><span class="notice-icon">i</span><span><strong>Educational prototype</strong> &nbsp;This local demo uses simplified, in-process protocol implementations. It is not production-ready cryptography or a real KYC service.</span></div>
+      </section>
+
+      <section class="panel" id="panel-psi">
+        <div class="page-intro"><div class="eyebrow">MODULE A / PRIVATE SET INTERSECTION</div><h1>Sanctions screening</h1><p>Compare a bank's customer list with a regulator's watchlist. The bank learns its own matches; neither side sends its full input list in the protocol.</p></div>
+        <div class="algorithm-card" id="guide-psi" data-guide="psi" aria-live="polite"></div>
+        <div class="work-grid">
+          <form class="card form-card" id="psi-form">
+            <div class="card-heading"><span class="card-icon icon-purple">A</span><div><h2>Configure a PSI run</h2><p>Use fictional identifiers, one per line.</p></div></div>
+            <label for="psi-watchlist">Regulator watchlist</label>
+            <textarea id="psi-watchlist" rows="5" required>John Doe|19800101|US
+Mallory|19700505|RU
+Jane Roe|19900202|GB</textarea>
+            <label for="psi-customers">Bank customer list</label>
+            <textarea id="psi-customers" rows="5" required>Alice|19950303|IN
+MALLORY|19700505|RU
+Bob|19880808|US</textarea>
+            <button class="button button-primary" type="submit">Run private set intersection <span>-&gt;</span></button>
+          </form>
+          <div class="card result-card" id="psi-result"><div class="result-placeholder"><span class="placeholder-icon">A</span><h3>Your result will appear here</h3><p>Run the demo to see which customer entries match.</p></div></div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-aml">
+        <div class="page-intro"><div class="eyebrow">MODULE B / SECURE MULTIPARTY COMPUTATION</div><h1>AML analytics</h1><p>Secret-share the banks' features, compute a weighted score, and reveal only whether it meets the threshold.</p></div>
+        <div class="algorithm-card" id="guide-aml" data-guide="aml" aria-live="polite"></div>
+        <div class="work-grid">
+          <form class="card form-card" id="aml-form">
+            <div class="card-heading"><span class="card-icon icon-orange">B</span><div><h2>Set the risk policy</h2><p>Enter small, fictional demo values.</p></div></div>
+            <label for="aml-bank-a">Bank A features <span class="label-hint">comma-separated</span></label>
+            <input id="aml-bank-a" value="120,4" required>
+            <label for="aml-bank-b">Bank B features <span class="label-hint">comma-separated</span></label>
+            <input id="aml-bank-b" value="300,6" required>
+            <label for="aml-bank-c">Bank C features <span class="label-hint">comma-separated</span></label>
+            <input id="aml-bank-c" value="80,2" required>
+            <div class="field-row">
+              <div><label for="aml-weights">Model weights</label><input id="aml-weights" value="2,50" required></div>
+              <div><label for="aml-threshold">Threshold</label><input id="aml-threshold" type="number" min="0" max="65535" value="800" required></div>
+            </div>
+            <button class="button button-primary" type="submit">Run secure computation <span>-&gt;</span></button>
+          </form>
+          <div class="card result-card" id="aml-result"><div class="result-placeholder"><span class="placeholder-icon">B</span><h3>Your result will appear here</h3><p>Only the threshold flag is returned to this page.</p></div></div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-registry">
+        <div class="page-intro"><div class="eyebrow">MODULE C / READ-ONLY DORAM</div><h1>Private registry</h1><p>Retrieve a KYC status with a one-hot query split between two servers. Neither server should learn the requested record index.</p></div>
+        <div class="algorithm-card" id="guide-registry" data-guide="registry" aria-live="polite"></div>
+        <div class="work-grid">
+          <form class="card form-card" id="registry-form">
+            <div class="card-heading"><span class="card-icon icon-blue">C</span><div><h2>Query the demo registry</h2><p>Statuses: 0 not verified, 1 basic, 2 enhanced, 3 fully verified.</p></div></div>
+            <label for="registry-records">Registry statuses <span class="label-hint">comma-separated</span></label>
+            <input id="registry-records" value="1,0,2,1,3" required>
+            <label for="registry-index">Record index <span class="label-hint">zero-based</span></label>
+            <input id="registry-index" type="number" min="0" value="3" required>
+            <button class="button button-primary" type="submit">Read privately <span>-&gt;</span></button>
+          </form>
+          <div class="card result-card" id="registry-result"><div class="result-placeholder"><span class="placeholder-icon">C</span><h3>Your result will appear here</h3><p>Try reading one of the sample registry entries.</p></div></div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-credential">
+        <div class="page-intro"><div class="eyebrow">MODULE D / ZERO-KNOWLEDGE CREDENTIAL</div><h1>Verifiable KYC claims</h1><p>Issue a demo credential and prove age, nationality, and KYC-level predicates to a relying party without returning the date of birth.</p></div>
+        <div class="algorithm-card" id="guide-credential" data-guide="credential" aria-live="polite"></div>
+        <div class="work-grid">
+          <form class="card form-card" id="credential-form">
+            <div class="card-heading"><span class="card-icon icon-green">D</span><div><h2>Enter wallet attributes</h2><p>Fictional details stay in this local demo.</p></div></div>
+            <label for="credential-dob">Date of birth</label>
+            <input id="credential-dob" type="date" value="2003-06-15" required>
+            <label for="credential-nationality">Nationality code <span class="label-hint">demo accepts 1, 44, or 91</span></label>
+            <input id="credential-nationality" type="number" min="0" max="999" value="91" required>
+            <label for="credential-level">KYC level <span class="label-hint">0 to 15</span></label>
+            <input id="credential-level" type="number" min="0" max="15" value="3" required>
+            <label for="credential-rp">Relying party</label>
+            <input id="credential-rp" value="demo-bank" maxlength="64" required>
+            <button class="button button-primary" type="submit">Issue and verify proof <span>-&gt;</span></button>
+          </form>
+          <div class="card result-card" id="credential-result"><div class="result-placeholder"><span class="placeholder-icon">D</span><h3>Your result will appear here</h3><p>The proof checks the demo policy: age 18+, allowed nationality, and KYC level 2+.</p></div></div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-attacks">
+        <div class="page-intro"><div class="eyebrow">V0 VS V1 / INTERACTIVE SECURITY LAB</div><h1>Understand the attack</h1><p>Select one scenario, inspect how it works, then run the same demonstration against the vulnerable baseline or the protected prototype. “Succeeded” describes the attack—not a passing test.</p></div>
+        <div class="attack-lab-grid">
+          <div class="card attack-config">
+            <div class="card-heading"><span class="card-icon icon-red">!</span><div><h2>Choose a scenario</h2><p>Try one of the 13 bundled demonstrations.</p></div></div>
+            <label for="attack-select">Attack scenario</label>
+            <select id="attack-select"><option value="">Loading attack catalog...</option></select>
+            <div id="attack-overview" class="attack-overview"><p>Scenario details will appear here.</p></div>
+            <div class="attack-stepper" id="attack-walkthrough"></div>
+            <div class="attack-inputs" id="attack-input-fields"></div>
+            <div class="attack-actions">
+              <button class="button button-muted" id="attack-run-v0" type="button" disabled>Run on vulnerable v0</button>
+              <button class="button button-outline" id="attack-run-v1" type="button" disabled>Run on protected v1</button>
+              <button class="button button-primary" id="attack-run-both" type="button" disabled>Compare both <span>-&gt;</span></button>
+            </div>
+          </div>
+          <div class="card attack-result" id="attack-result" aria-live="polite">
+            <div class="result-placeholder"><span class="placeholder-icon">!</span><h3>Choose an attack to begin</h3><p>Review its use case and steps, edit any available scenario inputs, then run it against v0, v1, or both.</p></div>
+          </div>
+        </div>
+        <div class="notice"><span class="notice-icon">i</span><span><strong>Interpretation:</strong> “Attack succeeded” means the vulnerability was demonstrated. A residual-risk result on v1 is intentional for scenarios the prototype only partially mitigates. Scenarios use fictional, bounded inputs.</span></div>
+      </section>
+
+      <footer class="footer"><span>CS670 &middot; Privacy-preserving KYC/AML</span><span>Local educational prototype</span></footer>
+    </main>
+  </div>
+</body>
+</html>

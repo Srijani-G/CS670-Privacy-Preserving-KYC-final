@@ -55,13 +55,14 @@ def _a1():
 # ==========================================================================
 # 2. Hash dictionary over the watchlist
 # ==========================================================================
-def _a2():
+def _a2(candidate_ids: list[str] | None = None):
     # a reduced ID space (the plan extrapolates the full brute-force rate from
     # this measured sample); includes the known watchlisted ID-9999.
-    id_space = [f"ID-{n}" for n in range(1000, 1300)] + ["ID-9999"]
+    id_space = candidate_ids or [f"ID-{n}" for n in range(1000, 1300)] + ["ID-9999"]
 
     def v0():
         sys = _sample_v0()
+        sys.watchlist = {sha256_id("ID-9999")}
         recovered = [i for i in id_space if sha256_id(i) in sys.watchlist]
         return Outcome(bool(recovered), f"{len(recovered)} IDs",
                        f"recovered {recovered}")
@@ -112,9 +113,10 @@ def _a3():
 # ==========================================================================
 # 4. Amount snooping
 # ==========================================================================
-def _a4():
+def _a4(amount: int = 5000):
     def v0():
         sys = _sample_v0()
+        sys.bank_amounts[sha256_id("ID-1002")] = [amount, 50]
         h = sha256_id("ID-1002")
         res = sys.risk_engine(h, [2, 10], 1000)
         return Outcome(True, "amounts seen", f"server saw {res['amounts_seen']}")
@@ -122,7 +124,7 @@ def _a4():
     def v1():
         # additive shares: a single server sees only a uniform random share.
         from ppkyc.mpc.dotprod import share_value
-        s0, s1 = share_value(5000, 32)
+        s0, s1 = share_value(amount, 32)
         # S0 sees s0, which is uniform and independent of 5000.
         return Outcome(False, "0 amounts",
                        f"server share {s0} is uniform")
@@ -349,16 +351,14 @@ def _a10():
 # ==========================================================================
 # 11. Sybil accounts at one RP
 # ==========================================================================
-def _a11():
+def _a11(attempts: int = 5):
     issuer = cr.Issuer("gov-issuer")
     wallet = cr.Wallet(dob=20000101, nationality=91, kyc_level=3)
     wallet.store_credential(cr.issue(issuer, wallet.issuance_request(), 20301231))
     preds = cr.Predicates(min_age=18, allowed_nats=[91], min_level=2)
-    N = 5
-
     def v0():
         sys = _sample_v0()
-        for _ in range(N):
+        for _ in range(attempts):
             sys.open_account("bank-A", secrets.token_hex(8))
         return Outcome(True, f"{len(sys.rp_accounts['bank-A'])} accounts",
                        "no nullifier")
@@ -366,7 +366,7 @@ def _a11():
     def v1():
         rp = cr.RelyingParty("bank-A", issuer.ipk)
         created = 0
-        for k in range(N):
+        for k in range(attempts):
             req = cr.PresentationRequest("bank-A", secrets.token_bytes(16),
                                          k, 20261103, preds)
             pres = cr.present(wallet, req)
@@ -380,25 +380,24 @@ def _a11():
 # ==========================================================================
 # 12. PSI enumeration (partially mitigated, honest limitation)
 # ==========================================================================
-def _a12():
+def _a12(range_start: int = 7000, range_count: int = 3000, cap: int = 100):
     watchlist = ["ID-9999", "ID-8888", "ID-7777"]
 
     def v0():
         sys = _sample_v0()
         sys.watchlist = {sha256_id(w) for w in watchlist}
         # malicious bank enumerates the whole id space against sha256 watchlist
-        learned = [f"ID-{n}" for n in range(7000, 10000)
+        learned = [f"ID-{n}" for n in range(range_start, range_start + range_count)
                    if sha256_id(f"ID-{n}") in sys.watchlist]
         return Outcome(len(learned) == len(watchlist), f"{len(learned)} entries",
                        "full watchlist enumerated")
 
     def v1():
         # DH-PSI does not cryptographically stop enumeration, but v1 caps |Q|.
-        CAP = 100
-        huge_query = [f"ID-{n}" for n in range(7000, 10000)]  # attacker inflates
-        allowed = huge_query[:CAP]  # query cap enforced by the regulator
+        huge_query = [f"ID-{n}" for n in range(range_start, range_start + range_count)]
+        allowed = huge_query[:cap]  # query cap enforced by the regulator
         matched = run_psi(watchlist, allowed)
-        return Outcome(len(matched) >= 1, f"<= {CAP}/window (capped)",
+        return Outcome(len(matched) >= 1, f"<= {cap}/window (capped)",
                        "query cap + auth + audit (residual)")
 
     return Attack(12, "PSI enumeration", "query cap (residual limit)", v0, v1)
@@ -431,3 +430,34 @@ def _a13():
 def build_attacks() -> list[Attack]:
     return [_a1(), _a2(), _a3(), _a4(), _a5(), _a6(), _a7(), _a8(),
             _a9(), _a10(), _a11(), _a12(), _a13()]
+
+
+def run_attack(number: int, system: str, **parameters) -> Outcome:
+    """Run one bundled attack scenario against one system."""
+    factories = {
+        1: _a1,
+        2: lambda: _a2(parameters.get("candidate_ids")),
+        3: _a3,
+        4: lambda: _a4(parameters.get("amount", 5000)),
+        5: _a5,
+        6: _a6,
+        7: _a7,
+        8: _a8,
+        9: _a9,
+        10: _a10,
+        11: lambda: _a11(parameters.get("attempts", 5)),
+        12: lambda: _a12(
+            parameters.get("range_start", 7000),
+            parameters.get("range_count", 3000),
+            parameters.get("cap", 100),
+        ),
+        13: _a13,
+    }
+    if system not in {"v0", "v1"}:
+        raise ValueError(f"Unknown attack target: {system}")
+    try:
+        attack = factories[number]()
+    except KeyError as exc:
+        raise ValueError(f"Unknown attack number: {number}") from exc
+    runner = attack.run_v0 if system == "v0" else attack.run_v1
+    return runner()

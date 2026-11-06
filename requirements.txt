@@ -8,6 +8,8 @@
 # standard library does not provide; py_ecc supplies a pure-Python BLS12-381.
 # The rest of the project still runs with no third-party package at all.
 py_ecc>=8.0
+fastapi>=0.115
+uvicorn[standard]>=0.34
 
 # Optional, for the property-based / nicer test experience:
 pytest>=7.0
