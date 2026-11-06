@@ -10,7 +10,10 @@ from ppkyc.mpc.gc_compare import compare_flag
 from ppkyc.mpc.pipeline import run_pipeline
 from ppkyc.oram.linear import LinearScanORAM
 from ppkyc.oram.sqrt import SqrtORAM
-from ppkyc.oram.doram_ro import RegistryServer, RegistryClient
+from ppkyc.oram.doram_ro import (
+    RegistryServer, RegistryClient, generate_synthetic_registry,
+    encode_registry_statuses, KYC_STATUS_CODES,
+)
 
 
 # -- Module A: PSI ---------------------------------------------------------
@@ -118,14 +121,21 @@ def test_sqrt_oram_trace_indistinguishable():
     assert len(set(b.phys_log[:b.sqrt])) == len(b.phys_log[:b.sqrt])
 
 
-def test_doram_read_only():
-    db = [100, 200, 300, 400, 500]
+def test_doram_read_only_1024_synthetic_records():
+    records = generate_synthetic_registry(size=1024, seed=670)
+    db = encode_registry_statuses(records)
+    assert len(records) == len(db) == 1024
+    assert len({record["customer_id"] for record in records}) == 1024
+    assert set(db).issubset(set(KYC_STATUS_CODES.values()))
+
     s0, s1 = RegistryServer("S0", db), RegistryServer("S1", db)
     cli = RegistryClient(s0, s1)
-    for i in range(5):
-        assert cli.read(i) == db[i]
-    # server never logs the index, only the vector length
-    assert all(n == 5 for n in s0.query_log)
+    assert cli.n == 1024
+    for i in (0, 1, 511, 512, 1023):
+        assert cli.read(i) == KYC_STATUS_CODES[records[i]["kyc_status"]]
+    # Each server sees only the fixed vector length, never the requested index.
+    assert all(n == 1024 for n in s0.query_log)
+    assert all(n == 1024 for n in s1.query_log)
 
 
 # -- attack lab ------------------------------------------------------------
