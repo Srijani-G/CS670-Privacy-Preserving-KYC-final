@@ -60,6 +60,18 @@ It is a local educational demo only; do not enter real customer information.
 Press `Ctrl+C` in each terminal to stop its server. The Attack Lab runs all 13
 scenarios and may take around a minute.
 
+The private-registry page accepts up to 2,048 status records per DORAM query.
+Use **Load 2,048-record sample** to populate a demo registry and read its final
+record.
+
+## Large-data comparisons
+
+The opt-in [`large_tests/`](large_tests) suite generates synthetic CSV datasets
+with thousands of rows and compares naive and privacy-preserving outputs for all
+four modules. See [`large_tests/README.md`](large_tests/README.md) for generation
+and run commands. MPC and credential runs can be slow at the full 1,000-case
+size, so the runner defaults to 10 cases per module.
+
 ## The four modules
 
 | Module | KYC task | Course tools | Code |

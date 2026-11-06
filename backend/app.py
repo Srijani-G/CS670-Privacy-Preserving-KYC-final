@@ -48,7 +48,7 @@ class AmlRequest(BaseModel):
 
 
 class RegistryRequest(BaseModel):
-    records: list[int] = Field(min_length=1, max_length=128)
+    records: list[int] = Field(min_length=1, max_length=2048)
     index: int = Field(ge=0)
 
 
