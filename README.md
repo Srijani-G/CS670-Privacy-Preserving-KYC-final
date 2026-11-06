@@ -9,9 +9,10 @@ deliberately flawed naive system (**v0**) next to the private system (**v1**),
 runs the same attacks on both, and names the course property that blocks each
 one.
 
-Everything is implemented from scratch in **pure Python 3** (standard library
-only — `hashlib`, `secrets`, `sqlite3`). No external cryptography library is
-used; the only library calls are hashing and randomness, as the plan allows.
+The core protocol implementations are written in **Python 3** and primarily
+use standard-library primitives such as `hashlib` and `secrets`. The optional
+BBS+ credential upgrade uses `py_ecc` for BLS12-381 pairing operations; the
+local web demo additionally uses FastAPI and Uvicorn.
 
 ## Quick start
 
@@ -35,7 +36,7 @@ python -m demo.demo_bbs    # unlinkable, blindly-issued credentials (fixes linka
 
 The static frontend calls a FastAPI backend that runs the existing protocol code.
 Each protocol page includes an interactive algorithm walkthrough and editable
-demo inputs. The attack lab lets you choose one of the 13 scenarios, inspect its
+demo inputs. The attack lab lets you choose one of the 7 implemented scenarios, inspect its
 steps, edit supported attacker inputs, and run it against v0, v1, or both. Its
 outcomes describe whether an attack succeeded; they are not test-pass indicators.
 It is a local educational demo only; do not enter real customer information.
@@ -60,9 +61,10 @@ It is a local educational demo only; do not enter real customer information.
 Press `Ctrl+C` in each terminal to stop its server. The Attack Lab runs all 7
 scenarios and may take a few seconds.
 
-The private-registry page accepts up to 2,048 status records per DORAM query.
+The private-registry page accepts 1–2,048 status records per DORAM query.
 Use **Load 2,048-record sample** to populate a demo registry and read its final
-record.
+record. The API schema boundary is tested separately from the DORAM protocol:
+2,048 records are accepted, while empty and 2,049-record requests are rejected.
 
 ## Large-data comparisons
 
@@ -93,8 +95,9 @@ DORAM currently operates on an indexed integer array of KYC-status codes
 (`0` pending, `1` verified, `2` rejected, `3` under review), derived from those
 records. Both non-colluding servers receive identical copies of this 1,024-entry
 array. The richer synthetic metadata remains in the local fixture and is not
-sent as part of the DORAM query. This is an in-memory educational simulation,
-not a persistent customer database.
+sent as part of the DORAM query. The API and frontend use the same status-code
+mapping: `0` pending, `1` verified, `2` rejected, and `3` under review. This is
+an in-memory educational simulation, not a persistent customer database.
 
 `generate_synthetic_registry()` and `encode_registry_statuses()` in
 `ppkyc/oram/doram_ro.py` define the fixture and its DORAM representation.
