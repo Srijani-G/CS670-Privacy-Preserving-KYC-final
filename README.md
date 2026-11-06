@@ -21,7 +21,6 @@ python -m pip install -r requirements.txt
 python run_tests.py        # full test suite (completeness, soundness, correctness, leakage)
 python -m demo.demo        # end-to-end demo of all four modules + the attack lab
 python -m attacks.run_attacks   # just the v0-vs-v1 attack table
-python -m bench.bench      # benchmarks (sigma vs MPCitH, GC cost, DORAM bandwidth)
 ```
 
 The core modules use only the standard library. The **BBS+ credential upgrade**
@@ -81,9 +80,8 @@ ppkyc/
   oram/       linear.py  sqrt.py  doram_ro.py
   kyc_naive/  v0.py                 # the deliberately-flawed baseline
   channel.py                        # view-recording channel (for leakage/simulator checks)
-attacks/      harness.py  attacks.py  run_attacks.py     # the 13-attack lab
+attacks/      harness.py  attacks.py  run_attacks.py     # the attack lab
 tests/        test_crypto_core.py  test_zkp.py  test_modules.py
-bench/        bench.py
 demo/         demo.py
 docs/         threat_model.md  paper_to_module.md
 ```
