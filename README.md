@@ -114,7 +114,7 @@ ppkyc/
   kyc_naive/  v0.py                 # the deliberately-flawed baseline
   channel.py                        # view-recording channel (for leakage/simulator checks)
 attacks/      harness.py  attacks.py  run_attacks.py     # the attack lab
-tests/        test_crypto_core.py  test_zkp.py  test_modules.py
+tests/        test_crypto_core.py  test_zkp.py  test_modules.py  test_api.py
 demo/         demo.py
 docs/         threat_model.md  paper_to_module.md
 ```
