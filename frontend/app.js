@@ -158,6 +158,17 @@ const protocolGuides = {
     ],
     takeaway: "For this local demo the sample attributes are sent to the local Python API, which simulates the issuer and wallet. In a real design, attributes belong on the user's device.",
   },
+  credbbs: {
+    title: "What happens in a BBS+ showing?",
+    useCase: "A customer gets a credential the issuer signs without seeing the wallet secret, then shows it to banks so that no two showings can be linked to the same person.",
+    steps: [
+      ["Seal the wallet secret", "The wallet commits to its secret key and proves it knows the opening; the issuer signs the commitment, never the raw secret.", "WALLET -> ISSUER"],
+      ["Re-randomise each show", "Before presenting, the wallet multiplies the signature by fresh randomness, so every showing looks like different group elements.", "WALLET"],
+      ["Prove without revealing", "A pairing check confirms the issuer signature and a zero-knowledge proof covers the hidden attributes; only the chosen attribute is disclosed.", "WALLET -> RELYING PARTY"],
+      ["Scope the nullifier", "The per-relying-party nullifier is identical on repeat visits (so a second account is blocked) but unrelated across banks.", "RELYING PARTY"],
+    ],
+    takeaway: "This demo discloses nationality to satisfy the policy; proving a hidden threshold such as age >= 18 without revealing the value needs range proofs (Bulletproofs), left as future work.",
+  },
 };
 
 function renderProtocolGuide(container, guide) {
@@ -323,6 +334,42 @@ bindForm("credential-form", "credential-result", "Issuing the demo credential an
   if (data.reason) addText(target, "p", "result-message", data.reason);
   if (data.proof_generated) addText(target, "p", "result-message", `Proof verified for ${data.relying_party}.`);
   showPrivacyNote(target, data.privacy_note);
+});
+
+bindForm("credbbs-form", "credbbs-result", "Blindly issuing and presenting the BBS+ credential; pairings take a few seconds...", async (target) => {
+  const dob = document.getElementById("credbbs-dob").value;
+  const parts = dob.split("-").map(Number);
+  if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part))) {
+    throw new Error("Enter a valid date of birth.");
+  }
+  const [year, month, day] = parts;
+  const data = await postJson("/api/credential-bbs", {
+    dob: year * 10000 + month * 100 + day,
+    nationality: Number(document.getElementById("credbbs-nationality").value),
+    kyc_level: Number(document.getElementById("credbbs-level").value),
+    relying_party: document.getElementById("credbbs-rp").value.trim(),
+  });
+  showHeader(target, "BBS+ CREDENTIAL", "Unlinkable presentation");
+  const verdict = document.createElement("div");
+  verdict.className = `verdict ${data.accepted ? "pass" : "fail"}`;
+  addText(verdict, "span", "verdict-symbol", data.accepted ? "OK" : "!");
+  addText(verdict, "span", "", data.accepted ? `Accepted at ${data.relying_party}` : "Policy not satisfied");
+  target.append(verdict);
+  addText(target, "p", "result-message", data.issuer_saw_sk
+    ? "The issuer saw the wallet secret."
+    : "Blind issuance: the issuer signed the credential without ever seeing the wallet secret (sk).");
+  showMetrics(target, [
+    ["Show #1 fingerprint", data.show1_fingerprint],
+    ["Show #2 fingerprint", data.show2_fingerprint],
+    ["Two shows unlinkable", data.shows_unlinkable ? "yes" : "no"],
+    [`Nullifier at ${data.relying_party}`, data.nullifier_here],
+    [`Nullifier at ${data.other_relying_party}`, data.nullifier_other],
+    ["Different banks unlinkable", data.cross_rp_unlinkable ? "yes" : "no"],
+    ["2nd account at same bank", data.second_show_accepted ? "accepted" : "blocked"],
+    ["Sybil blocked", data.sybil_blocked ? "yes" : "no"],
+  ]);
+  showPrivacyNote(target, data.privacy_note);
+  addText(target, "p", "privacy-note", data.scope_note);
 });
 
 const attackSelect = document.getElementById("attack-select");
