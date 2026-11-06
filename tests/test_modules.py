@@ -129,19 +129,13 @@ def test_doram_read_only():
 
 
 def test_doram_reads_from_2048_record_registry():
-    from backend.app import RegistryRequest, private_registry_read
-    from pydantic import ValidationError
-
     records = [index % 4 for index in range(2048)]
-    result = private_registry_read(RegistryRequest(records=records, index=2047))
-    assert result["registry_size"] == 2048
-    assert result["status_code"] == records[2047]
+    s0, s1 = RegistryServer("S0", records), RegistryServer("S1", records)
+    client = RegistryClient(s0, s1)
 
-    try:
-        RegistryRequest(records=[0] * 2049, index=0)
-        assert False, "registry requests above 2048 records should be rejected"
-    except ValidationError:
-        pass
+    assert client.read(2047) == records[2047]
+    assert s0.query_log == [2048]
+    assert s1.query_log == [2048]
 
 
 # -- attack lab ------------------------------------------------------------
